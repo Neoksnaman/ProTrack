@@ -126,12 +126,6 @@ export default function TaskList({ project, tasks, isLoading, onAddTask, onEditT
         ) : (
           <div className="text-center py-8">
             <p className="text-muted-foreground">No tasks have been added to this project yet.</p>
-             {canModify && (
-              <Button onClick={onAddTask} size="sm" variant="outline" className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Add the first task
-              </Button>
-            )}
           </div>
         )}
         </TooltipProvider>
