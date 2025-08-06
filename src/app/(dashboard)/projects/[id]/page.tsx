@@ -34,6 +34,7 @@ export default function ProjectPage() {
   const { user } = useAuth();
   const { 
     projects, 
+    users,
     isProjectsLoading, 
     updateProjectInCache, 
     removeProjectFromCache,
@@ -73,20 +74,35 @@ export default function ProjectPage() {
     if (isProjectsLoading || !user) return;
 
     if (project) {
-        const userIsAdmin = user.role === 'Admin';
+        if (user.role === 'Admin') {
+            setIsAuthorized(true);
+            return;
+        }
+
         const userIsLeader = project.teamLeaderId === user.id;
         const userIsMember = project.teamMemberIds.includes(user.id);
-        
-        if (userIsAdmin || userIsLeader || userIsMember) {
+
+        if (userIsLeader || userIsMember) {
             setIsAuthorized(true);
-        } else {
-            setIsAuthorized(false);
+            return;
         }
+
+        if (user.role === 'Senior' && user.team) {
+            const teamMemberIds = users
+                .filter(u => u.team === user.team)
+                .map(u => u.id);
+            const isTeamProject = project.teamMemberIds.some(id => teamMemberIds.includes(id));
+            if (isTeamProject) {
+                setIsAuthorized(true);
+                return;
+            }
+        }
+        
+        setIsAuthorized(false);
     } else {
-        // Project not found in the list, could be loading or invalid ID
         setIsAuthorized(false);
     }
-  }, [project, user, isProjectsLoading]);
+  }, [project, user, users, isProjectsLoading]);
 
   const projectTasks = useMemo(() => {
     return tasks.filter(t => t.projectId === id);
@@ -298,6 +314,7 @@ export default function ProjectPage() {
              }
              {isActivitiesLoading ? <Skeleton className="h-48 w-full" /> : 
                 <ActivityList 
+                    project={displayProject}
                     activities={projectActivities} 
                     tasks={projectTasks}
                     isLoading={isActivitiesLoading} 
