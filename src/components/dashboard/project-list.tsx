@@ -79,14 +79,14 @@ export default function ProjectList() {
       
       return projects.filter(project => 
         project.teamLeaderId === user.id || 
-        project.teamMemberIds.some(member => member.id === user.id) ||
+        project.teamMemberIds.includes(user.id) ||
         project.teamMemberIds.some(memberId => teamMemberIds.includes(memberId))
       );
     }
 
     // Default for Associates
     return projects.filter(project => 
-      project.teamLeaderId === user.id || project.teamMemberIds.some(member => member.id === user.id)
+      project.teamLeaderId === user.id || project.teamMemberIds.includes(user.id)
     );
   }, [projects, users, user]);
 
