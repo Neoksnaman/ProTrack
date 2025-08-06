@@ -1,10 +1,11 @@
-import 'dotenv/config'; // Loads .env automatically
+// Load dotenv only during local development
+if (process.env.NODE_ENV !== 'production') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('dotenv').config();
+}
 
-// Spreadsheet settings
 export const spreadsheetId = process.env.GOOGLE_SHEET_ID as string;
 export const sheetName = process.env.GOOGLE_SHEET_NAME as string;
-
-// Parse Google service account credentials from environment variable
 export const serviceAccountCredentials = JSON.parse(
   process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS as string
 );
