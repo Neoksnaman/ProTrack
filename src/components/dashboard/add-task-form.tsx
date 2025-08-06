@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -23,6 +24,7 @@ import { createTask } from '@/lib/sheets';
 import type { Task, TaskStatus } from '@/lib/types';
 import { Textarea } from '../ui/textarea';
 import { Card, CardContent } from '../ui/card';
+import { useAuth } from '@/hooks/use-auth';
 
 interface AddTaskFormProps {
   isOpen: boolean;
@@ -41,6 +43,7 @@ const statuses: TaskStatus[] = ['To Do', 'In Progress', 'Done'];
 
 export default function AddTaskForm({ isOpen, setIsOpen, projectId, onTaskAdded }: AddTaskFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -53,12 +56,17 @@ export default function AddTaskForm({ isOpen, setIsOpen, projectId, onTaskAdded 
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to create a task.' });
+      return;
+    }
     setIsLoading(true);
     try {
       const newTaskData = {
         ...values,
         description: values.description || '',
         projectId,
+        userId: user.id,
       };
       const newTask = await createTask(newTaskData);
       onTaskAdded(newTask);
@@ -67,6 +75,7 @@ export default function AddTaskForm({ isOpen, setIsOpen, projectId, onTaskAdded 
         description: `Task "${newTask.name}" has been added to the project.`,
       });
       form.reset();
+      setIsOpen(false);
     } catch (error) {
       toast({
         variant: 'destructive',

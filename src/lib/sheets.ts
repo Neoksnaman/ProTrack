@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { google } from 'googleapis';
@@ -743,15 +744,22 @@ export async function getTasks(): Promise<Task[]> {
   }
   try {
     const sheets = getSheets();
-    await ensureSheetHeaders(TASK_SHEET_NAME, ['id', 'name', 'description', 'projectID', 'status']);
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${TASK_SHEET_NAME}!A:E`,
-    });
-    const rows = response.data.values;
+    await ensureSheetHeaders(TASK_SHEET_NAME, ['id', 'name', 'description', 'projectID', 'userID', 'status']);
+    
+    const [users, taskResponse] = await Promise.all([
+        getUsers(),
+        sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${TASK_SHEET_NAME}!A:F`,
+        })
+    ]);
+
+    const userMap = new Map(users.map(u => [u.id, u]));
+    const rows = taskResponse.data.values;
     if (!rows || rows.length <= 1) {
       return [];
     }
+    
     const tasks: Task[] = [];
     for (const row of rows.slice(1)) {
       try {
@@ -759,12 +767,22 @@ export async function getTasks(): Promise<Task[]> {
           console.warn(`Skipping incomplete task row:`, row);
           continue;
         };
+        
+        const user = userMap.get(row[4]);
+        if (!user) {
+            console.warn(`User with ID ${row[4]} not found for task. Skipping.`);
+            continue;
+        }
+
         tasks.push({
           id: row[0],
           name: row[1],
           description: row[2],
           projectId: row[3],
-          status: row[4] as TaskStatus,
+          userId: row[4],
+          userName: user.name,
+          userAvatar: user.avatar,
+          status: row[5] as TaskStatus,
         });
       } catch (e) {
         console.warn(`Could not process task row. Error: ${e}. Row data:`, row);
@@ -777,13 +795,13 @@ export async function getTasks(): Promise<Task[]> {
   }
 }
 
-export async function createTask(task: Omit<Task, 'id'>): Promise<Task> {
+export async function createTask(task: Omit<Task, 'id' | 'userName' | 'userAvatar'>): Promise<Task> {
   if (!SPREADSHEET_ID || !TASK_SHEET_NAME) {
     throw new Error('Server configuration error for tasks sheet.');
   }
   try {
     const sheets = getSheets();
-    await ensureSheetHeaders(TASK_SHEET_NAME, ['id', 'name', 'description', 'projectID', 'status']);
+    await ensureSheetHeaders(TASK_SHEET_NAME, ['id', 'name', 'description', 'projectID', 'userID', 'status']);
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
@@ -806,21 +824,26 @@ export async function createTask(task: Omit<Task, 'id'>): Promise<Task> {
       task.name,
       task.description,
       task.projectId,
+      task.userId,
       task.status,
     ];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${TASK_SHEET_NAME}!A:E`,
+      range: `${TASK_SHEET_NAME}!A:F`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [newTaskRow],
       },
     });
 
+    const user = await getUsers().then(users => users.find(u => u.id === task.userId));
+
     return { 
       ...task, 
       id: taskId,
+      userName: user?.name || 'Unknown User',
+      userAvatar: user?.avatar || `https://placehold.co/100x100.png?text=U`,
     };
   } catch (error) {
     console.error('Error creating task in sheet:', error);
@@ -853,12 +876,13 @@ export async function updateTask(task: Task): Promise<Task> {
             task.name,
             task.description,
             task.projectId,
+            task.userId,
             task.status,
         ];
 
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${TASK_SHEET_NAME}!A${rowIndex + 1}:E${rowIndex + 1}`,
+            range: `${TASK_SHEET_NAME}!A${rowIndex + 1}:F${rowIndex + 1}`,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: [updatedRow],

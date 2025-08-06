@@ -277,6 +277,7 @@ export default function ProjectPage() {
              {isActivitiesLoading ? <Skeleton className="h-48 w-full" /> : 
                 <ActivityList 
                     activities={projectActivities} 
+                    tasks={projectTasks}
                     isLoading={isActivitiesLoading} 
                     onAddActivity={() => setIsAddActivityDialogOpen(true)} 
                     onEditActivity={handleEditActivity} 

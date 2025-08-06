@@ -86,9 +86,21 @@ export default function EditActivityForm({ isOpen, setIsOpen, activity, tasks, o
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
+      const selectedTask = tasks.find(t => t.id === values.taskId);
+      if (!selectedTask) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Selected task could not be found.',
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       const updatedActivityData = {
         ...activity,
         ...values,
+        taskName: selectedTask.name, // Ensure the new task name is included
         date: format(values.date, 'yyyy-MM-dd'),
         startTime: padTime(values.startTime),
         endTime: padTime(values.endTime),

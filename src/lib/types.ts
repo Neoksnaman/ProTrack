@@ -1,4 +1,5 @@
 
+
 export type ProjectStatus = 'Planning' | 'In Progress' | 'Blocked' | 'Completed';
 export type ProjectPriority = 'High' | 'Medium' | 'Low';
 
@@ -48,6 +49,9 @@ export type Task = {
   name: string;
   description: string;
   projectId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
   status: TaskStatus;
 };
 

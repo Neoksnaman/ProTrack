@@ -29,11 +29,17 @@ export default function ProjectDetails({ project, setProjectStatus, isSavingStat
   const { user } = useAuth();
   const isOverdue = isBefore(parseISO(project.deadline), startOfToday()) && project.status !== 'Completed';
 
-  const canModify = useMemo(() => {
+  const canModifyProject = useMemo(() => {
     if (!user || !project) return false;
     if (user.role === 'Admin') return true;
     if (project.teamLeaderId === user.id) return true;
-    if (project.teamMemberIds.some(member => member.id === user.id)) return true;
+    return false;
+  }, [user, project]);
+
+  const canUpdateStatus = useMemo(() => {
+    if (!user || !project) return false;
+    if (user.role === 'Admin') return true;
+    if (project.teamLeaderId === user.id) return true;
     return false;
   }, [user, project]);
 
@@ -62,7 +68,7 @@ export default function ProjectDetails({ project, setProjectStatus, isSavingStat
       <CardHeader>
         <div className="flex justify-between items-center">
             <CardTitle>Project Details</CardTitle>
-            {canModify && (
+            {canModifyProject && (
               <div className='flex items-center gap-2'>
                   <Button variant="ghost" size="icon" onClick={onEdit}>
                       <Edit className="h-5 w-5" />
@@ -81,7 +87,7 @@ export default function ProjectDetails({ project, setProjectStatus, isSavingStat
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>Status</Label>
-            <Select value={project.status} onValueChange={handleStatusChange} disabled={isSavingStatus || !canModify}>
+            <Select value={project.status} onValueChange={handleStatusChange} disabled={isSavingStatus || !canUpdateStatus}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Update status" />
               </SelectTrigger>

@@ -2,12 +2,13 @@
 
 'use client';
 
+import { useMemo, useState } from 'react';
 import type { Project, Task } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { CheckCircle, CircleDot, Circle, Plus, Edit, Trash2 } from 'lucide-react';
+import { CheckCircle, CircleDot, Circle, Plus, Edit, Trash2, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   Tooltip,
@@ -16,7 +17,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useAuth } from '@/hooks/use-auth';
-import { useMemo } from 'react';
 
 interface TaskListProps {
   project: Project;
@@ -27,16 +27,26 @@ interface TaskListProps {
   onDeleteTask: (task: Task) => void;
 }
 
+const ITEMS_PER_PAGE = 3;
+
 export default function TaskList({ project, tasks, isLoading, onAddTask, onEditTask, onDeleteTask }: TaskListProps) {
   const { user } = useAuth();
+  const [currentPage, setCurrentPage] = useState(1);
   
-  const canModify = useMemo(() => {
+  const canAddTask = useMemo(() => {
     if (!user || !project) return false;
     if (user.role === 'Admin') return true;
+    if (project.teamMemberIds.some(id => id === user.id)) return true;
     if (project.teamLeaderId === user.id) return true;
-    if (project.teamMemberIds.some(member => member.id === user.id)) return true;
     return false;
   }, [user, project]);
+
+  const canModifyTask = (task: Task) => {
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    if (user.id === task.userId) return true;
+    return false;
+  }
 
   const getStatusIcon = (status: Task['status']) => {
     switch (status) {
@@ -62,12 +72,19 @@ export default function TaskList({ project, tasks, isLoading, onAddTask, onEditT
     }
   }
 
+  const totalPages = Math.ceil(tasks.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentTasks = useMemo(() => {
+    return tasks.slice(startIndex, endIndex);
+  }, [tasks, startIndex, endIndex]);
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Tasks</CardTitle>
-          {canModify && (
+          {canAddTask && (
             <Button onClick={onAddTask} size="sm" disabled={isLoading}>
               <Plus className="mr-2 h-4 w-4" />
               New Task
@@ -83,43 +100,53 @@ export default function TaskList({ project, tasks, isLoading, onAddTask, onEditT
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
-        ) : tasks.length > 0 ? (
+        ) : currentTasks.length > 0 ? (
           <ul className="space-y-3">
-            {tasks.map((task) => (
-              <li key={task.id} className="flex items-start justify-between p-3 rounded-lg border">
-                <div className="flex items-start gap-3 w-0 flex-1">
+            {currentTasks.map((task) => (
+              <li key={task.id} className="flex flex-col gap-2 p-3 rounded-lg border">
+                <div className="flex items-start gap-3">
                   <span className="pt-0.5">
                     {getStatusIcon(task.status)}
                   </span>
-                  <div className='w-0 flex-1'>
-                    <p className="font-medium truncate">{task.name}</p>
-                     {task.description ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                           <p className="text-sm text-muted-foreground truncate">{task.description}</p>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs whitespace-normal">
-                          <p>{task.description}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : null}
+                  <div className="flex-1 space-y-1.5 min-w-0">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{task.name}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <User className="h-4 w-4" />
+                          <span>{task.userName}</span>
+                        </div>
+                      </div>
+                      <div className='flex items-center shrink-0 gap-2 pl-2'>
+                          <Badge variant="outline" className={cn(getStatusColor())}>{task.status}</Badge>
+                          {canModifyTask(task) && (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => onEditTask(task)}>
+                                  <Edit className="h-4 w-4" />
+                                  <span className="sr-only">Edit Task</span>
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDeleteTask(task)}>
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Delete Task</span>
+                              </Button>
+                            </>
+                          )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className='flex items-center gap-2 pl-2'>
-                    <Badge variant="outline" className={cn(getStatusColor())}>{task.status}</Badge>
-                    {canModify && (
-                      <>
-                        <Button variant="ghost" size="icon" onClick={() => onEditTask(task)}>
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit Task</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDeleteTask(task)}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete Task</span>
-                        </Button>
-                      </>
-                    )}
-                </div>
+                 {task.description && (
+                  <div className="pl-8">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                           <p className="text-sm text-foreground pt-1 line-clamp-2">{task.description}</p>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs whitespace-normal">{task.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -130,6 +157,31 @@ export default function TaskList({ project, tasks, isLoading, onAddTask, onEditT
         )}
         </TooltipProvider>
       </CardContent>
+       {totalPages > 1 && (
+        <CardFooter className="flex justify-center items-center gap-4 pt-4">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+            >
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Previous
+            </Button>
+            <span className="text-sm font-medium text-muted-foreground">
+                Page {currentPage} of {totalPages}
+            </span>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+            >
+                Next
+                <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

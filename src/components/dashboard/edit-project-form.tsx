@@ -66,7 +66,7 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
         description: project.description,
         clientId: project.clientId,
         teamLeaderId: project.teamLeaderId,
-        teamMemberIds: project.teamMemberIds.map(m => m.id),
+        teamMemberIds: project.teamMemberIds,
         startDate: parseISO(project.startDate),
         deadline: parseISO(project.deadline),
         status: project.status,
@@ -495,3 +495,5 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
     </>
   );
 }
+
+    
