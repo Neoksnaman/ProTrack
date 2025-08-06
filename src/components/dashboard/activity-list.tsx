@@ -2,8 +2,8 @@
 
 'use client';
 
-import { useState } from 'react';
-import type { Activity, Task } from '@/lib/types';
+import { useState, useMemo } from 'react';
+import type { Activity, Project, Task } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 
 interface ActivityListProps {
+  project: Project;
   activities: Activity[];
   tasks: Task[];
   isLoading: boolean;
@@ -25,10 +26,18 @@ interface ActivityListProps {
 
 const ITEMS_PER_PAGE = 3;
 
-export default function ActivityList({ activities, tasks, isLoading, onAddActivity, onEditActivity, onDeleteActivity }: ActivityListProps) {
+export default function ActivityList({ project, activities, tasks, isLoading, onAddActivity, onEditActivity, onDeleteActivity }: ActivityListProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
+
+  const canAddActivity = useMemo(() => {
+    if (!user || !project) return false;
+    if (user.role === 'Admin') return true;
+    if (project.teamMemberIds.includes(user.id)) return true;
+    if (project.teamLeaderId === user.id) return true;
+    return false;
+  }, [user, project]);
 
   const totalPages = Math.ceil(activities.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -91,10 +100,12 @@ export default function ActivityList({ activities, tasks, isLoading, onAddActivi
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Activity Log</CardTitle>
-          <Button onClick={handleAddActivityClick} size="sm" disabled={isLoading}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Activity
-          </Button>
+          {canAddActivity && (
+            <Button onClick={handleAddActivityClick} size="sm" disabled={isLoading}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Activity
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
