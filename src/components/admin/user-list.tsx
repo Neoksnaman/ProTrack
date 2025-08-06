@@ -91,7 +91,7 @@ export default function UserList() {
       return;
     }
 
-    const isUserInProject = projects.some(p => p.teamLeaderId === deletingUser.id || p.teamMemberIds.some(member => member.id === deletingUser.id));
+    const isUserInProject = projects.some(p => p.teamLeaderId === deletingUser.id || p.teamMemberIds.some(id => id === deletingUser.id));
     if (isUserInProject) {
         toast({
             variant: 'destructive',

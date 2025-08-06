@@ -1,14 +1,12 @@
 
-
 'use server';
 
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
 import type { Project, User, UserRole, Client, Task, TaskStatus, Activity } from './types';
-import { serviceAccountCredentials, spreadsheetId, sheetName as userSheetName } from './google-config';
 
-const SPREADSHEET_ID = spreadsheetId;
-const USER_SHEET_NAME = userSheetName;
+const SPREADSHEET_ID = '1lVy51rKvYbw0IN3erlBcZ99PT1RjQVKeZjwS_87EwOU';
+const USER_SHEET_NAME = 'user';
 const PROJECT_SHEET_NAME = 'project';
 const CLIENT_SHEET_NAME = 'client';
 const TASK_SHEET_NAME = 'task';
@@ -16,13 +14,13 @@ const ACTIVITY_SHEET_NAME = 'activity';
 
 
 const getAuth = () => {
-  if (!serviceAccountCredentials || !serviceAccountCredentials.client_email || !serviceAccountCredentials.private_key) {
-    throw new Error('Google service account credentials are not set or are invalid.');
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY must be set in .env');
   }
 
   return new JWT({
-    email: serviceAccountCredentials.client_email,
-    key: serviceAccountCredentials.private_key,
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
 };
@@ -249,7 +247,7 @@ export async function getUsers(): Promise<User[]> {
 }
 
 export async function findUserByEmail(email: string): Promise<User | null> {
-  if (!SPREADSHEET_ID || !USER_SHEET_NAME || !serviceAccountCredentials) {
+  if (!SPREADSHEET_ID || !USER_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -286,7 +284,7 @@ export async function findUserByEmail(email: string): Promise<User | null> {
 }
 
 export async function createUser(user: Omit<User, 'id' | 'avatar'>): Promise<User> {
-   if (!SPREADSHEET_ID || !USER_SHEET_NAME || !serviceAccountCredentials) {
+   if (!SPREADSHEET_ID || !USER_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -332,7 +330,7 @@ export async function createUser(user: Omit<User, 'id' | 'avatar'>): Promise<Use
 }
 
 export async function updateUser(user: Omit<User, 'avatar'>): Promise<User> {
-  if (!SPREADSHEET_ID || !USER_SHEET_NAME || !serviceAccountCredentials) {
+  if (!SPREADSHEET_ID || !USER_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -392,7 +390,7 @@ export async function updateUser(user: Omit<User, 'avatar'>): Promise<User> {
 
 
 export async function verifyUser(username: string, password: string):Promise<User | null> {
-   if (!SPREADSHEET_ID || !USER_SHEET_NAME || !serviceAccountCredentials) {
+   if (!SPREADSHEET_ID || !USER_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -430,7 +428,7 @@ export async function verifyUser(username: string, password: string):Promise<Use
 
 
 export async function getProjects(): Promise<Project[]> {
-  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME || !serviceAccountCredentials) {
+  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -517,7 +515,7 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function getProjectById(id: string): Promise<Project | null> {
-  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME || !serviceAccountCredentials) {
+  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -574,7 +572,7 @@ export async function getProjectById(id: string): Promise<Project | null> {
 
 
 export async function createProject(project: Omit<Project, 'id' | 'teamLeader' | 'teamMembers' | 'teamMemberIds' | 'clientName'> & { teamLeaderId: string; teamMemberIds: string[], clientId: string }): Promise<Project> {
-  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME || !serviceAccountCredentials) {
+  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -642,7 +640,7 @@ export async function createProject(project: Omit<Project, 'id' | 'teamLeader' |
 }
 
 export async function updateProject(project: Omit<Project, 'teamLeader' | 'teamMembers' | 'clientName'>): Promise<Project> {
-  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME || !serviceAccountCredentials) {
+  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -706,7 +704,7 @@ export async function updateProject(project: Omit<Project, 'teamLeader' | 'teamM
 
 
 export async function updateProjectStatus(id: string, status: Project['status']): Promise<void> {
-  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME || !serviceAccountCredentials) {
+  if (!SPREADSHEET_ID || !PROJECT_SHEET_NAME) {
     console.error("Missing Google Sheets configuration");
     throw new Error('Server configuration error.');
   }
@@ -1205,7 +1203,7 @@ export async function deleteProjectAndRelatedData(projectId: string): Promise<vo
 
 export async function deleteUser(userId: string): Promise<void> {
     const projects = await getProjects();
-    const isUserInProject = projects.some(p => p.teamLeaderId === userId || p.teamMemberIds.includes(userId));
+    const isUserInProject = projects.some(p => p.teamLeaderId === userId || p.teamMemberIds.some(tm => tm.id === userId));
 
     if (isUserInProject) {
         throw new Error("Cannot delete user. The user is currently assigned to one or more projects.");
