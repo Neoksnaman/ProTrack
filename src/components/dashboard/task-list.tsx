@@ -36,7 +36,7 @@ export default function TaskList({ project, tasks, isLoading, onAddTask, onEditT
   const canAddTask = useMemo(() => {
     if (!user || !project) return false;
     if (user.role === 'Admin') return true;
-    if (project.teamMemberIds.some(id => id === user.id)) return true;
+    if (project.teamMemberIds.includes(user.id)) return true;
     if (project.teamLeaderId === user.id) return true;
     return false;
   }, [user, project]);
