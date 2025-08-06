@@ -24,12 +24,14 @@ import AddActivityForm from '@/components/dashboard/add-activity-form';
 import EditActivityForm from '@/components/dashboard/edit-activity-form';
 import DeleteProjectDialog from '@/components/dashboard/delete-project-dialog';
 import DeleteItemDialog from '@/components/admin/delete-item-dialog';
+import { useAuth } from '@/hooks/use-auth';
 
 
 export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { user } = useAuth();
   const { 
     projects, 
     isProjectsLoading, 
@@ -49,6 +51,7 @@ export default function ProjectPage() {
   const { toast } = useToast();
   const { start, finish } = useTopLoaderStore();
 
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [optimisticStatus, setOptimisticStatus] = useState<Project['status'] | null>(null);
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -66,6 +69,25 @@ export default function ProjectPage() {
     return projects.find((p) => p.id === id);
   }, [projects, id]);
   
+  useEffect(() => {
+    if (isProjectsLoading || !user) return;
+
+    if (project) {
+        const userIsAdmin = user.role === 'Admin';
+        const userIsLeader = project.teamLeaderId === user.id;
+        const userIsMember = project.teamMemberIds.includes(user.id);
+        
+        if (userIsAdmin || userIsLeader || userIsMember) {
+            setIsAuthorized(true);
+        } else {
+            setIsAuthorized(false);
+        }
+    } else {
+        // Project not found in the list, could be loading or invalid ID
+        setIsAuthorized(false);
+    }
+  }, [project, user, isProjectsLoading]);
+
   const projectTasks = useMemo(() => {
     return tasks.filter(t => t.projectId === id);
   }, [tasks, id]);
@@ -222,15 +244,15 @@ export default function ProjectPage() {
   };
 
 
-  if (isProjectsLoading && !project) {
+  if (isProjectsLoading || isAuthorized === null) {
     return <PageSkeleton />;
   }
 
-  if (!displayProject) {
+  if (!displayProject || !isAuthorized) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold">Project Not Found</h2>
-        <p className="text-muted-foreground">The project you are looking for does not exist.</p>
+        <p className="text-muted-foreground">The project you are looking for does not exist or you do not have permission to view it.</p>
         <Button asChild className="mt-4">
           <Link href="/" onClick={start}>
             <ArrowLeft className="mr-2 h-4 w-4" />
