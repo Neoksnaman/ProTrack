@@ -82,21 +82,32 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
 
   const availableLeaders = useMemo(() => {
     if (!currentUser) return [];
+    
+    let leaders: User[] = [];
     if (currentUser.role === 'Admin' || currentUser.role === 'Supervisor') {
-      return allUsers.filter(user => !selectedTeamMembers.includes(user.id));
+      leaders = allUsers.filter(user => !selectedTeamMembers.includes(user.id));
+    } else {
+      // Add other role logic if necessary
+      leaders = allUsers.filter(user => !selectedTeamMembers.includes(user.id));
     }
-    // Add other role logic if necessary
-    return allUsers.filter(user => !selectedTeamMembers.includes(user.id));
+    return leaders.sort((a,b) => a.name.localeCompare(b.name));
+
   }, [allUsers, selectedTeamMembers, currentUser]);
 
   const availableMembers = useMemo(() => {
-    return allUsers.filter(user => user.id !== selectedTeamLeader);
+    return allUsers
+      .filter(user => user.id !== selectedTeamLeader)
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [allUsers, selectedTeamLeader]);
 
+  const sortedClients = useMemo(() => {
+    return [...clients].sort((a, b) => a.name.localeCompare(b.name));
+  }, [clients]);
+
   const filteredClients = useMemo(() => {
-    if (!clientSearch) return clients;
-    return clients.filter(client => client.name.toLowerCase().includes(clientSearch.toLowerCase()));
-  }, [clients, clientSearch]);
+    if (!clientSearch) return sortedClients;
+    return sortedClients.filter(client => client.name.toLowerCase().includes(clientSearch.toLowerCase()));
+  }, [sortedClients, clientSearch]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {

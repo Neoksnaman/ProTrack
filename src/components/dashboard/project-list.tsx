@@ -19,7 +19,7 @@ export default function ProjectList() {
   const { user } = useAuth();
   const { projects, users, tasks, activities, isProjectsLoading } = useData();
 
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [overdueFilter, setOverdueFilter] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,7 +92,10 @@ export default function ProjectList() {
 
   const filteredProjects = useMemo(() => {
     const filtered = visibleProjects.filter((project) => {
-      const statusMatch = statusFilter === 'all' || project.status === statusFilter;
+      const statusMatch =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && project.status !== 'Completed') ||
+        project.status === statusFilter;
       const priorityMatch = priorityFilter === 'all' || project.priority === priorityFilter;
       const isOverdue = project.deadline ? isBefore(parseISO(project.deadline), startOfToday()) && project.status !== 'Completed' : false;
       const overdueMatch = !overdueFilter || isOverdue;

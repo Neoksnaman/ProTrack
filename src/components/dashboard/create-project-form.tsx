@@ -71,33 +71,35 @@ export default function CreateProjectForm() {
   const availableLeaders = useMemo(() => {
     if (!currentUser) return [];
 
+    let leaders: User[] = [];
     const role = currentUser.role;
 
     if (role === 'Admin' || role === 'Supervisor') {
-      return allUsers.filter(user => !selectedTeamMembers.includes(user.id));
+      leaders = allUsers.filter(user => !selectedTeamMembers.includes(user.id));
+    } else if (role === 'Senior') {
+      const teamMembers = allUsers.filter(u => u.team === currentUser.team && u.id !== currentUser.id);
+      leaders = [currentUser, ...teamMembers].filter(user => !selectedTeamMembers.includes(user.id));
+    } else if (role === 'Associate') {
+      leaders = [currentUser];
     }
 
-    if (role === 'Senior') {
-        const teamMembers = allUsers.filter(u => u.team === currentUser.team && u.id !== currentUser.id);
-        return [currentUser, ...teamMembers].filter(user => !selectedTeamMembers.includes(user.id));
-    }
-    
-    if (role === 'Associate') {
-        return [currentUser];
-    }
-    
-    return [];
-
+    return leaders.sort((a, b) => a.name.localeCompare(b.name));
   }, [allUsers, selectedTeamMembers, currentUser]);
 
   const availableMembers = useMemo(() => {
-    return allUsers.filter(user => user.id !== selectedTeamLeader);
+    return allUsers
+      .filter(user => user.id !== selectedTeamLeader)
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [allUsers, selectedTeamLeader]);
 
+  const sortedClients = useMemo(() => {
+    return [...clients].sort((a, b) => a.name.localeCompare(b.name));
+  }, [clients]);
+
   const filteredClients = useMemo(() => {
-    if (!clientSearch) return clients;
-    return clients.filter(client => client.name.toLowerCase().includes(clientSearch.toLowerCase()));
-  }, [clients, clientSearch]);
+    if (!clientSearch) return sortedClients;
+    return sortedClients.filter(client => client.name.toLowerCase().includes(clientSearch.toLowerCase()));
+  }, [sortedClients, clientSearch]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -520,3 +522,5 @@ export default function CreateProjectForm() {
     </>
   );
 }
+
+    

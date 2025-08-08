@@ -12,7 +12,7 @@ import {
   SidebarFooter,
   useSidebar
 } from '@/components/ui/sidebar';
-import { FolderKanban, Settings, LayoutDashboard, Shield, User } from 'lucide-react';
+import { FolderKanban, Settings, LayoutDashboard, Shield, User, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useTopLoaderStore } from '@/stores/use-top-loader-store';
 
@@ -46,6 +46,14 @@ export default function AppSidebar() {
               <Link href="/" onClick={(e) => handleLinkClick(e, '/')}>
                 <LayoutDashboard />
                 <span>Dashboard</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === '/stats'} tooltip="My Stats">
+              <Link href="/stats" onClick={(e) => handleLinkClick(e, '/stats')}>
+                <BarChart2 />
+                <span>My Stats</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
