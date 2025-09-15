@@ -16,6 +16,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const PUBLIC_PATHS = ['/login', '/forgot-password', '/status'];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,18 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // This can be used to protect routes
   useEffect(() => {
-    if (!isLoading && !user && !['/login', '/forgot-password'].includes(pathname)) {
+    if (!isLoading && !user && !PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
       // Redirect to login if not authenticated and not on a public page
       router.push('/login');
     }
   }, [user, isLoading, router, pathname]);
   
-  if (isLoading) {
+  if (isLoading && !PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
     return <FullScreenLoader />;
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading: false }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading: isLoading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -83,3 +85,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    

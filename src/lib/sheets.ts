@@ -4,12 +4,13 @@
 
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
-import type { Project, User, UserRole, Client, Task, TaskStatus, Activity } from './types';
+import type { Project, User, UserRole, Client, Task, TaskStatus, Activity, ProjectType } from './types';
 
 const SPREADSHEET_ID = '1lVy51rKvYbw0IN3erlBcZ99PT1RjQVKeZjwS_87EwOU';
 const USER_SHEET_NAME = 'user';
 const PROJECT_SHEET_NAME = 'project';
 const CLIENT_SHEET_NAME = 'client';
+const LIST_SHEET_NAME = 'list';
 const TASK_SHEET_NAME = 'task';
 const ACTIVITY_SHEET_NAME = 'activity';
 
@@ -64,6 +65,46 @@ async function ensureSheetHeaders(sheetName: string, headers: string[]) {
       console.error(`Error ensuring sheet headers for ${sheetName}:`, error);
       throw new Error(`Could not prepare the ${sheetName} data sheet.`);
     }
+  }
+}
+
+export async function getProjectTypes(): Promise<ProjectType[]> {
+  if (!SPREADSHEET_ID || !LIST_SHEET_NAME) {
+    throw new Error('Server configuration error for project types sheet.');
+  }
+  try {
+    const sheets = getSheets();
+    await ensureSheetHeaders(LIST_SHEET_NAME, ['id', 'name']);
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${LIST_SHEET_NAME}!A:B`,
+    });
+    
+    const rows = response.data.values;
+    if (!rows || rows.length <= 1) {
+      return [];
+    }
+
+    const projectTypes: ProjectType[] = [];
+    for (const row of rows.slice(1)) {
+        try {
+            if (!Array.isArray(row) || !row[0] || !row[1]) {
+                console.warn(`Skipping incomplete or malformed project type data row:`, row);
+                continue;
+            }
+            projectTypes.push({
+                id: row[0],
+                name: row[1],
+            });
+        } catch (e) {
+            console.warn(`Could not process project type row. Error: ${e}. Row data:`, row);
+            continue;
+        }
+    }
+    return projectTypes;
+  } catch (error) {
+    console.error('Error getting project types from sheet:', error);
+    throw new Error('Could not retrieve project type data.');
   }
 }
 
@@ -208,10 +249,10 @@ export async function getUsers(): Promise<User[]> {
   }
   try {
     const sheets = getSheets();
-    await ensureSheetHeaders(USER_SHEET_NAME, ['id', 'username', 'name', 'email', 'password', 'role', 'team']);
+    await ensureSheetHeaders(USER_SHEET_NAME, ['id', 'username', 'name', 'email', 'password', 'role', 'team', 'status']);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USER_SHEET_NAME}!A:G`,
+      range: `${USER_SHEET_NAME}!A:H`,
     });
     const rows = response.data.values;
     if (!rows || rows.length <= 1) {
@@ -234,6 +275,7 @@ export async function getUsers(): Promise<User[]> {
                 avatar: `https://placehold.co/100x100.png?text=${row[2].charAt(0)}`,
                 role: row[5] as UserRole,
                 team: row[6],
+                status: row[7] || 'Active',
             });
         } catch(e) {
             console.warn(`Could not process user row. Error: ${e}. Row data:`, row);
@@ -254,10 +296,10 @@ export async function findUserByEmail(email: string): Promise<User | null> {
   }
   try {
     const sheets = getSheets();
-    await ensureSheetHeaders(USER_SHEET_NAME, ['id', 'username', 'name', 'email', 'password', 'role', 'team']);
+    await ensureSheetHeaders(USER_SHEET_NAME, ['id', 'username', 'name', 'email', 'password', 'role', 'team', 'status']);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USER_SHEET_NAME}!A:G`,
+      range: `${USER_SHEET_NAME}!A:H`,
     });
 
     const rows = response.data.values;
@@ -273,6 +315,7 @@ export async function findUserByEmail(email: string): Promise<User | null> {
             avatar: `https://placehold.co/100x100.png?text=${row[2].charAt(0)}`,
             role: row[5],
             team: row[6],
+            status: row[7] || 'Active',
           };
         }
       }
@@ -291,7 +334,7 @@ export async function createUser(user: Omit<User, 'id' | 'avatar'>): Promise<Use
   }
   try {
     const sheets = getSheets();
-    await ensureSheetHeaders(USER_SHEET_NAME, ['id', 'username', 'name', 'email', 'password', 'role', 'team']);
+    await ensureSheetHeaders(USER_SHEET_NAME, ['id', 'username', 'name', 'email', 'password', 'role', 'team', 'status']);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: `${USER_SHEET_NAME}!A:A`,
@@ -308,11 +351,11 @@ export async function createUser(user: Omit<User, 'id' | 'avatar'>): Promise<Use
 
     const newIdNumber = lastIdNumber + 1;
     const userId = `USER-${String(newIdNumber).padStart(3, '0')}`;
-    const newUserRow = [userId, user.username, user.name, user.email, user.password, user.role, user.team];
+    const newUserRow = [userId, user.username, user.name, user.email, user.password, user.role, user.team, user.status || 'Active'];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USER_SHEET_NAME}!A:G`,
+      range: `${USER_SHEET_NAME}!A:H`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [newUserRow],
@@ -349,7 +392,7 @@ export async function updateUser(user: Omit<User, 'avatar'>): Promise<User> {
         
         const originalRowResponse = await sheets.spreadsheets.values.get({
           spreadsheetId: SPREADSHEET_ID,
-          range: `${USER_SHEET_NAME}!A${rowIndex + 1}:G${rowIndex + 1}`,
+          range: `${USER_SHEET_NAME}!A${rowIndex + 1}:H${rowIndex + 1}`,
         });
         const originalRow = originalRowResponse.data.values?.[0];
         
@@ -360,12 +403,13 @@ export async function updateUser(user: Omit<User, 'avatar'>): Promise<User> {
           user.email,
           user.password || originalRow?.[4],
           user.role,
-          user.team
+          user.team,
+          user.status || originalRow?.[7] || 'Active'
         ];
 
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
-          range: `${USER_SHEET_NAME}!A${rowIndex + 1}:G${rowIndex + 1}`,
+          range: `${USER_SHEET_NAME}!A${rowIndex + 1}:H${rowIndex + 1}`,
           valueInputOption: 'USER_ENTERED',
           requestBody: {
             values: [updatedRow],
@@ -397,17 +441,21 @@ export async function verifyUser(username: string, password: string):Promise<Use
   }
   try {
     const sheets = getSheets();
-    await ensureSheetHeaders(USER_SHEET_NAME, ['id', 'username', 'name', 'email', 'password', 'role', 'team']);
+    await ensureSheetHeaders(USER_SHEET_NAME, ['id', 'username', 'name', 'email', 'password', 'role', 'team', 'status']);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USER_SHEET_NAME}!A:G`,
+      range: `${USER_SHEET_NAME}!A:H`,
     });
 
     const rows = response.data.values;
     if (rows) {
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
+        const userStatus = row[7] || 'Active'; // Default to Active if status is not set
         if (row[1] === username && row[4] === password) {
+          if (userStatus === 'Inactive') {
+            return null; // Do not allow login for inactive users
+          }
           return {
             id: row[0],
             username: row[1],
@@ -416,6 +464,7 @@ export async function verifyUser(username: string, password: string):Promise<Use
             avatar: `https://placehold.co/100x100.png?text=${row[2].charAt(0)}`,
             role: row[5],
             team: row[6],
+            status: userStatus,
           };
         }
       }
@@ -435,7 +484,7 @@ export async function getProjects(): Promise<Project[]> {
   }
   try {
     const sheets = getSheets();
-    const projectHeaders = ['id', 'name', 'description', 'clientID', 'teamLeaderId', 'teamMemberIds', 'startDate', 'deadline', 'status', 'priority'];
+    const projectHeaders = ['id', 'name', 'description', 'clientID', 'teamLeaderId', 'teamMemberIds', 'startDate', 'deadline', 'status', 'priority', 'type', 'shareToken'];
     await ensureSheetHeaders(PROJECT_SHEET_NAME, projectHeaders);
     
     const [users, clients, projectResponse] = await Promise.all([
@@ -443,7 +492,7 @@ export async function getProjects(): Promise<Project[]> {
       getClients(),
       sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${PROJECT_SHEET_NAME}!A:J`,
+        range: `${PROJECT_SHEET_NAME}!A:L`,
       })
     ]);
     
@@ -501,6 +550,8 @@ export async function getProjects(): Promise<Project[]> {
                 deadline: row[7],
                 status: row[8],
                 priority: row[9],
+                type: row[10] || '',
+                shareToken: row[11] || '',
             });
         } catch (e) {
             console.warn(`Could not process project row. Error: ${e}. Row data:`, row);
@@ -525,7 +576,7 @@ export async function getProjectById(id: string): Promise<Project | null> {
     const [projectResponse, users, clients] = await Promise.all([
       sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${PROJECT_SHEET_NAME}!A:J`,
+        range: `${PROJECT_SHEET_NAME}!A:L`,
       }),
       getUsers(),
       getClients()
@@ -564,6 +615,8 @@ export async function getProjectById(id: string): Promise<Project | null> {
       deadline: projectRow[7],
       status: projectRow[8] as Project['status'],
       priority: projectRow[9] as Project['priority'],
+      type: projectRow[10] || '',
+      shareToken: projectRow[11] || '',
     };
   } catch (error) {
     console.error(`Error getting project by ID ${id} from sheet:`, error);
@@ -579,7 +632,7 @@ export async function createProject(project: Omit<Project, 'id' | 'teamLeader' |
   }
   try {
     const sheets = getSheets();
-    const projectHeaders = ['id', 'name', 'description', 'clientID', 'teamLeaderId', 'teamMemberIds', 'startDate', 'deadline', 'status', 'priority'];
+    const projectHeaders = ['id', 'name', 'description', 'clientID', 'teamLeaderId', 'teamMemberIds', 'startDate', 'deadline', 'status', 'priority', 'type', 'shareToken'];
     await ensureSheetHeaders(PROJECT_SHEET_NAME, projectHeaders);
 
     const response = await sheets.spreadsheets.values.get({
@@ -609,11 +662,13 @@ export async function createProject(project: Omit<Project, 'id' | 'teamLeader' |
       project.deadline,
       project.status,
       project.priority,
+      project.type || '',
+      project.shareToken || '',
     ];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${PROJECT_SHEET_NAME}!A:J`,
+      range: `${PROJECT_SHEET_NAME}!A:L`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [newProjectRow],
@@ -672,11 +727,13 @@ export async function updateProject(project: Omit<Project, 'teamLeader' | 'teamM
       project.deadline,
       project.status,
       project.priority,
+      project.type || '',
+      project.shareToken || '',
     ];
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${PROJECT_SHEET_NAME}!A${rowIndex + 1}:J${rowIndex + 1}`,
+      range: `${PROJECT_SHEET_NAME}!A${rowIndex + 1}:L${rowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [updatedRow],

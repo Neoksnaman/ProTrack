@@ -8,12 +8,15 @@ import type { ProjectStatus, ProjectPriority } from '@/lib/types';
 import { Switch } from '../ui/switch';
 import { Input } from '../ui/input';
 import { Search } from 'lucide-react';
+import { useData } from '@/hooks/use-data';
 
 interface ProjectFiltersProps {
   statusFilter: string;
   setStatusFilter: (value: string) => void;
   priorityFilter: string;
   setPriorityFilter: (value: string) => void;
+  typeFilter: string;
+  setTypeFilter: (value: string) => void;
   overdueFilter: boolean;
   setOverdueFilter: (value: boolean) => void;
   searchQuery: string;
@@ -28,11 +31,14 @@ export default function ProjectFilters({
   setStatusFilter,
   priorityFilter,
   setPriorityFilter,
+  typeFilter,
+  setTypeFilter,
   overdueFilter,
   setOverdueFilter,
   searchQuery,
   setSearchQuery,
 }: ProjectFiltersProps) {
+  const { projectTypes } = useData();
   return (
     <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:items-end print:hidden">
        <div className="grid flex-1 gap-2">
@@ -76,6 +82,22 @@ export default function ProjectFilters({
             {priorities.map((priority) => (
               <SelectItem key={priority} value={priority}>
                 {priority}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid flex-1 gap-2">
+        <Label htmlFor="type-filter">Type</Label>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger id="type-filter">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {projectTypes.map((type) => (
+              <SelectItem key={type.id} value={type.id}>
+                {type.name}
               </SelectItem>
             ))}
           </SelectContent>

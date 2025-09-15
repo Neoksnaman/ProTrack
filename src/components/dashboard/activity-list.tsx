@@ -19,25 +19,27 @@ interface ActivityListProps {
   activities: Activity[];
   tasks: Task[];
   isLoading: boolean;
-  onAddActivity: () => void;
-  onEditActivity: (activity: Activity) => void;
-  onDeleteActivity: (activity: Activity) => void;
+  onAddActivity?: () => void;
+  onEditActivity?: (activity: Activity) => void;
+  onDeleteActivity?: (activity: Activity) => void;
+  isPublicView: boolean;
 }
 
 const ITEMS_PER_PAGE = 3;
 
-export default function ActivityList({ project, activities, tasks, isLoading, onAddActivity, onEditActivity, onDeleteActivity }: ActivityListProps) {
-  const { user } = useAuth();
+export default function ActivityList({ project, activities, tasks, isLoading, onAddActivity, onEditActivity, onDeleteActivity, isPublicView = false }: ActivityListProps) {
+  const auth = !isPublicView ? useAuth() : null;
+  const user = auth?.user;
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
 
   const canAddActivity = useMemo(() => {
-    if (!user || !project) return false;
+    if (isPublicView || !user || !project) return false;
     if (user.role === 'Admin') return true;
     if (project.teamMemberIds.includes(user.id)) return true;
     if (project.teamLeaderId === user.id) return true;
     return false;
-  }, [user, project]);
+  }, [user, project, isPublicView]);
 
   const totalPages = Math.ceil(activities.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -53,7 +55,7 @@ export default function ActivityList({ project, activities, tasks, isLoading, on
       });
       return;
     }
-    onAddActivity();
+    onAddActivity?.();
   };
 
   const formatDuration = (start: string, end: string) => {
@@ -91,7 +93,7 @@ export default function ActivityList({ project, activities, tasks, isLoading, on
   };
   
   const canModifyActivity = (activity: Activity) => {
-    if (!user) return false;
+    if (isPublicView || !user) return false;
     return user.role === 'Admin' || user.id === activity.userId;
   }
 
@@ -137,13 +139,15 @@ export default function ActivityList({ project, activities, tasks, isLoading, on
                               <Calendar className="h-4 w-4" />
                               <span>{format(parseISO(activity.date), 'MMM dd, yyyy')}</span>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="h-4 w-4" />
-                              <span>{formatDuration(activity.startTime, activity.endTime)}</span>
-                            </div>
+                            {!isPublicView && (
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-4 w-4" />
+                                <span>{formatDuration(activity.startTime, activity.endTime)}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        {canModifyActivity(activity) && (
+                        {canModifyActivity(activity) && onEditActivity && onDeleteActivity && (
                           <div className="flex items-center shrink-0">
                             <Button variant="ghost" size="icon" onClick={() => onEditActivity(activity)}>
                               <Edit className="h-4 w-4" />

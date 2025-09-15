@@ -22,27 +22,29 @@ interface TaskListProps {
   project: Project;
   tasks: Task[];
   isLoading: boolean;
-  onAddTask: () => void;
-  onEditTask: (task: Task) => void;
-  onDeleteTask: (task: Task) => void;
+  onAddTask?: () => void;
+  onEditTask?: (task: Task) => void;
+  onDeleteTask?: (task: Task) => void;
+  isPublicView: boolean;
 }
 
 const ITEMS_PER_PAGE = 3;
 
-export default function TaskList({ project, tasks, isLoading, onAddTask, onEditTask, onDeleteTask }: TaskListProps) {
-  const { user } = useAuth();
+export default function TaskList({ project, tasks, isLoading, onAddTask, onEditTask, onDeleteTask, isPublicView = false }: TaskListProps) {
+  const auth = !isPublicView ? useAuth() : null;
+  const user = auth?.user;
   const [currentPage, setCurrentPage] = useState(1);
   
   const canAddTask = useMemo(() => {
-    if (!user || !project) return false;
+    if (isPublicView || !user || !project) return false;
     if (user.role === 'Admin') return true;
     if (project.teamMemberIds.includes(user.id)) return true;
     if (project.teamLeaderId === user.id) return true;
     return false;
-  }, [user, project]);
+  }, [user, project, isPublicView]);
 
   const canModifyTask = (task: Task) => {
-    if (!user) return false;
+    if (isPublicView || !user) return false;
     if (user.role === 'Admin') return true;
     if (user.id === task.userId) return true;
     return false;
@@ -119,7 +121,7 @@ export default function TaskList({ project, tasks, isLoading, onAddTask, onEditT
                       </div>
                       <div className='flex items-center shrink-0 gap-2 pl-2'>
                           <Badge variant="outline" className={cn(getStatusColor())}>{task.status}</Badge>
-                          {canModifyTask(task) && (
+                          {canModifyTask(task) && onEditTask && onDeleteTask && (
                             <>
                               <Button variant="ghost" size="icon" onClick={() => onEditTask(task)}>
                                   <Edit className="h-4 w-4" />
@@ -185,3 +187,5 @@ export default function TaskList({ project, tasks, isLoading, onAddTask, onEditT
     </Card>
   );
 }
+
+    

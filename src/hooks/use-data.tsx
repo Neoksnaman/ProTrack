@@ -3,8 +3,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { User, Project, Client, Task, Activity } from '@/lib/types';
-import { getProjects, getUsers, getClients, getTasks, getActivities } from '@/lib/sheets';
+import type { User, Project, Client, Task, Activity, ProjectType } from '@/lib/types';
+import { getProjects, getUsers, getClients, getTasks, getActivities, getProjectTypes } from '@/lib/sheets';
 import { useToast } from './use-toast';
 import { FullScreenLoader } from '@/components/ui/loader';
 
@@ -12,6 +12,7 @@ interface DataContextType {
   users: User[];
   projects: Project[];
   clients: Client[];
+  projectTypes: ProjectType[];
   tasks: Task[];
   activities: Activity[];
   isLoading: boolean;
@@ -42,6 +43,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [projectTypes, setProjectTypes] = useState<ProjectType[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   
@@ -62,12 +64,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-        const [fetchedUsers, fetchedClients] = await Promise.all([
+        const [fetchedUsers, fetchedClients, fetchedProjectTypes] = await Promise.all([
             getUsers(),
             getClients(),
+            getProjectTypes(),
         ]);
         setUsers(fetchedUsers);
         setClients(fetchedClients);
+        setProjectTypes(fetchedProjectTypes.sort((a, b) => a.id.localeCompare(b.id)));
         setIsEssentialLoading(false);
 
         Promise.all([
@@ -225,7 +229,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{ 
-        users, projects, clients, tasks, activities, 
+        users, projects, clients, projectTypes, tasks, activities, 
         isLoading: isEssentialLoading,
         isProjectsLoading, isTasksLoading, isActivitiesLoading,
         refetch, 

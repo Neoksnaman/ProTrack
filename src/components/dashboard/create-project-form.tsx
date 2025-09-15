@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -7,6 +8,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 import { Calendar as CalendarIcon, Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +30,7 @@ import { useTopLoaderStore } from '@/stores/use-top-loader-store';
 
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Project name must be at least 3 characters.' }),
+  type: z.string().optional(),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   clientId: z.string({ required_error: 'Please select or create a client.' }),
   teamLeaderId: z.string({ required_error: 'Please select a team leader.' }),
@@ -42,7 +45,7 @@ export default function CreateProjectForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
-  const { users: allUsers, clients, addProjectToCache, addClientToCache } = useData();
+  const { users: allUsers, clients, projectTypes, addProjectToCache, addClientToCache } = useData();
   const { start } = useTopLoaderStore();
   const [isLoading, setIsLoading] = useState(false);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
@@ -62,11 +65,14 @@ export default function CreateProjectForm() {
       priority: 'Medium',
       startDate: undefined,
       deadline: undefined,
+      type: '',
     },
   });
 
   const selectedTeamLeader = form.watch('teamLeaderId');
   const selectedTeamMembers = form.watch('teamMemberIds') || [];
+
+  const activeUsers = useMemo(() => allUsers.filter(u => u.status !== 'Inactive'), [allUsers]);
 
   const availableLeaders = useMemo(() => {
     if (!currentUser) return [];
@@ -75,22 +81,22 @@ export default function CreateProjectForm() {
     const role = currentUser.role;
 
     if (role === 'Admin' || role === 'Supervisor') {
-      leaders = allUsers.filter(user => !selectedTeamMembers.includes(user.id));
+      leaders = activeUsers.filter(user => !selectedTeamMembers.includes(user.id));
     } else if (role === 'Senior') {
-      const teamMembers = allUsers.filter(u => u.team === currentUser.team && u.id !== currentUser.id);
+      const teamMembers = activeUsers.filter(u => u.team === currentUser.team && u.id !== currentUser.id);
       leaders = [currentUser, ...teamMembers].filter(user => !selectedTeamMembers.includes(user.id));
     } else if (role === 'Associate') {
       leaders = [currentUser];
     }
 
     return leaders.sort((a, b) => a.name.localeCompare(b.name));
-  }, [allUsers, selectedTeamMembers, currentUser]);
+  }, [activeUsers, selectedTeamMembers, currentUser]);
 
   const availableMembers = useMemo(() => {
-    return allUsers
+    return activeUsers
       .filter(user => user.id !== selectedTeamLeader)
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allUsers, selectedTeamLeader]);
+  }, [activeUsers, selectedTeamLeader]);
 
   const sortedClients = useMemo(() => {
     return [...clients].sort((a, b) => a.name.localeCompare(b.name));
@@ -109,6 +115,7 @@ export default function CreateProjectForm() {
         ...values,
         startDate: format(values.startDate, 'yyyy-MM-dd'),
         deadline: format(values.deadline, 'yyyy-MM-dd'),
+        shareToken: uuidv4(),
       };
 
       const newProject = await createProject(newProjectData as any);
@@ -165,6 +172,28 @@ export default function CreateProjectForm() {
                     <FormControl>
                       <Input placeholder="e.g., Q4 Product Launch" {...field} disabled={isLoading}/>
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select project type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {projectTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -522,5 +551,3 @@ export default function CreateProjectForm() {
     </>
   );
 }
-
-    

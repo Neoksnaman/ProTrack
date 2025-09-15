@@ -17,6 +17,13 @@ export type Project = {
   deadline: string;
   status: ProjectStatus;
   priority: ProjectPriority;
+  type?: string;
+  shareToken?: string;
+};
+
+export type ProjectType = {
+  id: string;
+  name: string;
 };
 
 export const UserRoles = ['Admin', 'Supervisor', 'Senior', 'Associate'] as const;
@@ -24,6 +31,9 @@ export type UserRole = typeof UserRoles[number];
 
 export const Teams = ['Team 1', 'Team 2', 'Team 3'] as const;
 export type Team = typeof Teams[number];
+
+export const UserStatuses = ['Active', 'Inactive'] as const;
+export type UserStatus = typeof UserStatuses[number];
 
 export type User = {
   id: string;
@@ -34,6 +44,7 @@ export type User = {
   password?: string;
   role: UserRole;
   team?: Team;
+  status?: UserStatus;
 };
 
 export type Client = {

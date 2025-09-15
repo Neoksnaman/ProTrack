@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -7,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Project } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isBefore, startOfToday } from 'date-fns';
-import { CalendarDays, Flag, Building, TriangleAlert, Hourglass, ListChecks, Info } from 'lucide-react';
+import { CalendarDays, Flag, Building, TriangleAlert, Hourglass, ListChecks, Info, User } from 'lucide-react';
 import { useTopLoaderStore } from '@/stores/use-top-loader-store';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
@@ -82,6 +83,10 @@ export default function ProjectCard({ project, completedTasks, totalTasks, total
            <div className="text-sm text-muted-foreground flex items-center gap-2">
               <Building className="h-4 w-4" />
               <span>{project.clientName}</span>
+            </div>
+           <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <User className="h-4 w-4" />
+              <span>{project.teamLeader}</span>
             </div>
           <div className="text-sm text-foreground space-y-2">
             <div className="flex items-center gap-2 print:hidden">

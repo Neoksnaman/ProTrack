@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -27,6 +28,7 @@ import { Card, CardContent } from '../ui/card';
 
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Project name must be at least 3 characters.' }),
+  type: z.string().optional(),
   description: z.string().min(10, { message: 'Description must be at least 10 characters.' }),
   clientId: z.string({ required_error: 'Please select a client.' }),
   teamLeaderId: z.string({ required_error: 'Please select a team leader.' }),
@@ -46,7 +48,7 @@ interface EditProjectFormProps {
 export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProjectFormProps) {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
-  const { users: allUsers, clients, updateProjectInCache, addClientToCache } = useData();
+  const { users: allUsers, clients, projectTypes, updateProjectInCache, addClientToCache } = useData();
   const [isLoading, setIsLoading] = useState(false);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [leaderPopoverOpen, setLeaderPopoverOpen] = useState(false);
@@ -71,6 +73,7 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
         deadline: parseISO(project.deadline),
         status: project.status,
         priority: project.priority,
+        type: project.type,
       });
       // We don't prefill the search, so the user can immediately search for a new client.
       setClientSearch('');
@@ -80,25 +83,27 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
   const selectedTeamLeader = form.watch('teamLeaderId');
   const selectedTeamMembers = form.watch('teamMemberIds') || [];
 
+  const activeUsers = useMemo(() => allUsers.filter(u => u.status !== 'Inactive'), [allUsers]);
+
   const availableLeaders = useMemo(() => {
     if (!currentUser) return [];
     
     let leaders: User[] = [];
     if (currentUser.role === 'Admin' || currentUser.role === 'Supervisor') {
-      leaders = allUsers.filter(user => !selectedTeamMembers.includes(user.id));
+      leaders = activeUsers.filter(user => !selectedTeamMembers.includes(user.id));
     } else {
       // Add other role logic if necessary
-      leaders = allUsers.filter(user => !selectedTeamMembers.includes(user.id));
+      leaders = activeUsers.filter(user => !selectedTeamMembers.includes(user.id));
     }
     return leaders.sort((a,b) => a.name.localeCompare(b.name));
 
-  }, [allUsers, selectedTeamMembers, currentUser]);
+  }, [activeUsers, selectedTeamMembers, currentUser]);
 
   const availableMembers = useMemo(() => {
-    return allUsers
+    return activeUsers
       .filter(user => user.id !== selectedTeamLeader)
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allUsers, selectedTeamLeader]);
+  }, [activeUsers, selectedTeamLeader]);
 
   const sortedClients = useMemo(() => {
     return [...clients].sort((a, b) => a.name.localeCompare(b.name));
@@ -184,6 +189,28 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
                         <FormMessage />
                         </FormItem>
                     )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Project Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select project type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {projectTypes.map((type) => (
+                                <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                     <FormField
                     control={form.control}
@@ -506,5 +533,3 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
     </>
   );
 }
-
-    

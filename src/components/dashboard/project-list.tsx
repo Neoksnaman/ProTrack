@@ -21,6 +21,7 @@ export default function ProjectList() {
 
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [overdueFilter, setOverdueFilter] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,17 +98,18 @@ export default function ProjectList() {
         (statusFilter === 'active' && project.status !== 'Completed') ||
         project.status === statusFilter;
       const priorityMatch = priorityFilter === 'all' || project.priority === priorityFilter;
+      const typeMatch = typeFilter === 'all' || project.type === typeFilter;
       const isOverdue = project.deadline ? isBefore(parseISO(project.deadline), startOfToday()) && project.status !== 'Completed' : false;
       const overdueMatch = !overdueFilter || isOverdue;
       const lowercasedQuery = searchQuery.toLowerCase();
       const searchMatch = 
         project.name.toLowerCase().includes(lowercasedQuery) ||
         project.clientName.toLowerCase().includes(lowercasedQuery);
-      return statusMatch && priorityMatch && overdueMatch && searchMatch;
+      return statusMatch && priorityMatch && typeMatch && overdueMatch && searchMatch;
     });
     setCurrentPage(1); // Reset to first page when filters change
     return filtered;
-  }, [visibleProjects, statusFilter, priorityFilter, overdueFilter, searchQuery]);
+  }, [visibleProjects, statusFilter, priorityFilter, typeFilter, overdueFilter, searchQuery]);
 
   const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -124,6 +126,8 @@ export default function ProjectList() {
           setStatusFilter={setStatusFilter}
           priorityFilter={priorityFilter}
           setPriorityFilter={setPriorityFilter}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
           overdueFilter={overdueFilter}
           setOverdueFilter={setOverdueFilter}
           searchQuery={searchQuery}
@@ -145,6 +149,8 @@ export default function ProjectList() {
         setStatusFilter={setStatusFilter}
         priorityFilter={priorityFilter}
         setPriorityFilter={setPriorityFilter}
+        typeFilter={typeFilter}
+        setTypeFilter={setTypeFilter}
         overdueFilter={overdueFilter}
         setOverdueFilter={setOverdueFilter}
         searchQuery={searchQuery}

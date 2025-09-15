@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo } from 'react';
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import type { Project, ProjectStatus } from '@/lib/types';
-import { CalendarDays, Flag, User as UserIcon, Users, Building, TriangleAlert, Edit, Trash2 } from 'lucide-react';
+import { CalendarDays, Flag, User as UserIcon, Users, Building, TriangleAlert, Edit, Trash2, Share2, Info } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
@@ -17,31 +18,36 @@ import { useAuth } from '@/hooks/use-auth';
 
 interface ProjectDetailsProps {
   project: Project;
-  setProjectStatus: (status: ProjectStatus) => void;
-  isSavingStatus: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
+  setProjectStatus?: (status: ProjectStatus) => void;
+  isSavingStatus?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onShare?: () => void;
+  isPublicView?: boolean;
 }
 
 const statuses: ProjectStatus[] = ['Planning', 'In Progress', 'Blocked', 'Completed'];
 
-export default function ProjectDetails({ project, setProjectStatus, isSavingStatus, onEdit, onDelete }: ProjectDetailsProps) {
-  const { user } = useAuth();
+export default function ProjectDetails({ project, setProjectStatus, isSavingStatus, onEdit, onDelete, onShare, isPublicView = false }: ProjectDetailsProps) {
+  const auth = !isPublicView ? useAuth() : null;
+  const user = auth?.user;
+  
   const isOverdue = isBefore(parseISO(project.deadline), startOfToday()) && project.status !== 'Completed';
 
   const canModifyProject = useMemo(() => {
-    if (!user || !project) return false;
+    if (isPublicView || !user || !project) return false;
     if (user.role === 'Admin') return true;
     if (project.teamLeaderId === user.id) return true;
     return false;
-  }, [user, project]);
+  }, [user, project, isPublicView]);
 
   const canUpdateStatus = useMemo(() => {
-    if (!user || !project) return false;
+    if (isPublicView || !user || !project) return false;
     if (user.role === 'Admin') return true;
     if (project.teamLeaderId === user.id) return true;
     return false;
-  }, [user, project]);
+  }, [user, project, isPublicView]);
+  
 
   const getPriorityColor = () => {
     switch (project.priority) {
@@ -56,8 +62,23 @@ export default function ProjectDetails({ project, setProjectStatus, isSavingStat
     }
   };
 
+  const getStatusColor = () => {
+    switch (project.status) {
+      case 'Completed':
+        return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-800';
+      case 'In Progress':
+        return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800';
+      case 'Blocked':
+        return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800';
+      case 'Planning':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-800';
+      default:
+        return 'bg-secondary text-secondary-foreground';
+    }
+  };
+
   const handleStatusChange = (newStatus: ProjectStatus) => {
-    setProjectStatus(newStatus);
+    setProjectStatus?.(newStatus);
   };
   
   const displayedMembers = project.teamMembers.slice(0, 2);
@@ -70,6 +91,10 @@ export default function ProjectDetails({ project, setProjectStatus, isSavingStat
             <CardTitle>Project Details</CardTitle>
             {canModifyProject && (
               <div className='flex items-center gap-2'>
+                  <Button variant="ghost" size="icon" onClick={onShare}>
+                      <Share2 className="h-5 w-5" />
+                      <span className="sr-only">Share Project</span>
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={onEdit}>
                       <Edit className="h-5 w-5" />
                       <span className="sr-only">Edit Project</span>
@@ -85,37 +110,47 @@ export default function ProjectDetails({ project, setProjectStatus, isSavingStat
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Status</Label>
-            <Select value={project.status} onValueChange={handleStatusChange} disabled={isSavingStatus || !canUpdateStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Update status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Separator />
+          {!isPublicView && (
+            <>
+              <div className="flex items-center justify-between">
+                <Label>Status</Label>
+                <Select value={project.status} onValueChange={handleStatusChange} disabled={isSavingStatus || !canUpdateStatus}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Update status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuses.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Separator />
+            </>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <InfoItem icon={<Building className="h-5 w-5 text-muted-foreground" />} label="Client">
                 {project.clientName}
             </InfoItem>
-            <InfoItem icon={<Flag className={cn("h-5 w-5", getPriorityColor())} />} label="Priority">
-              <Badge variant="outline" className={cn('border-none text-base font-normal p-0', getPriorityColor())}>
-                {project.priority}
-              </Badge>
-            </InfoItem>
+            {isPublicView ? (
+              <InfoItem icon={<Info className="h-5 w-5 text-muted-foreground" />} label="Status">
+                <Badge variant="outline" className={cn(getStatusColor())}>{project.status}</Badge>
+              </InfoItem>
+            ) : (
+              <InfoItem icon={<Flag className={cn("h-5 w-5", getPriorityColor())} />} label="Priority">
+                <Badge variant="outline" className={cn('border-none text-base font-normal p-0', getPriorityColor())}>
+                  {project.priority}
+                </Badge>
+              </InfoItem>
+            )}
             <InfoItem icon={<CalendarDays className="h-5 w-5 text-muted-foreground" />} label="Start Date">
               {format(parseISO(project.startDate), 'MMMM dd, yyyy')}
             </InfoItem>
             <InfoItem 
               icon={isOverdue ? <TriangleAlert className="h-5 w-5 text-red-600" /> : <CalendarDays className="h-5 w-5 text-muted-foreground" />} 
-              label="Deadline"
+              label={isPublicView ? "Estimated Date of Completion" : "Deadline"}
               valueClassName={cn(isOverdue && "text-red-600 font-medium")}
             >
               {format(parseISO(project.deadline), 'MMMM dd, yyyy')}

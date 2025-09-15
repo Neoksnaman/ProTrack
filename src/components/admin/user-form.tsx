@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -19,8 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { createUser, updateUser } from '@/lib/sheets';
-import type { User, UserRole, Team } from '@/lib/types';
-import { UserRoles, Teams } from '@/lib/types';
+import type { User, UserRole, Team, UserStatus } from '@/lib/types';
+import { UserRoles, Teams, UserStatuses } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { useData } from '@/hooks/use-data';
 import { Card, CardContent } from '../ui/card';
@@ -42,6 +43,7 @@ const formSchema = z.object({
   password: z.string().optional(),
   role: z.enum(UserRoles),
   team: z.enum(Teams).optional(),
+  status: z.enum(UserStatuses).optional(),
 });
 
 export default function UserForm({ isOpen, setIsOpen, user, onSubmitSuccess }: UserFormProps) {
@@ -59,6 +61,7 @@ export default function UserForm({ isOpen, setIsOpen, user, onSubmitSuccess }: U
       password: '',
       role: 'Associate',
       team: undefined,
+      status: 'Active',
     },
   });
   
@@ -73,6 +76,7 @@ export default function UserForm({ isOpen, setIsOpen, user, onSubmitSuccess }: U
         password: '', // Password is not pre-filled for security
         role: user.role,
         team: user.team,
+        status: user.status || 'Active',
       });
     } else {
       form.reset({
@@ -82,6 +86,7 @@ export default function UserForm({ isOpen, setIsOpen, user, onSubmitSuccess }: U
         password: '',
         role: 'Associate',
         team: undefined,
+        status: 'Active',
       });
     }
   }, [user, form, isOpen]);
@@ -206,7 +211,7 @@ export default function UserForm({ isOpen, setIsOpen, user, onSubmitSuccess }: U
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Role</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
                             <FormControl>
                                 <SelectTrigger>
                                 <SelectValue placeholder="Select a role" />
@@ -245,6 +250,28 @@ export default function UserForm({ isOpen, setIsOpen, user, onSubmitSuccess }: U
                         )}
                     />
                     </div>
+                     <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select a status" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {UserStatuses.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                     <DialogFooter className="pt-4">
                     <DialogClose asChild>
                         <Button type="button" variant="outline" disabled={isLoading}>

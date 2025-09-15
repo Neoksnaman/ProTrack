@@ -8,7 +8,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { updateProjectStatus, deleteProjectAndRelatedData, deleteTaskAndRelatedActivities, deleteActivity } from '@/lib/sheets';
 import type { Project, Task, Activity } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Share2 } from 'lucide-react';
 import ProjectDetails from '@/components/dashboard/project-details';
 import AISummary from '@/components/dashboard/ai-summary';
 import { useToast } from '@/hooks/use-toast';
@@ -258,6 +258,30 @@ export default function ProjectPage() {
     updateActivityInCache(updatedActivity);
     setEditingActivity(null);
   };
+  
+  const handleShare = () => {
+    if (!displayProject?.shareToken) {
+      toast({
+        variant: 'destructive',
+        title: 'Share Token Missing',
+        description: 'This project does not have a share token and cannot be shared.',
+      });
+      return;
+    }
+    const shareUrl = `${window.location.origin}/status?token=${displayProject.shareToken}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      toast({
+        title: 'Link Copied',
+        description: 'Public share link has been copied to your clipboard.',
+      });
+    }).catch(err => {
+       toast({
+        variant: 'destructive',
+        title: 'Failed to Copy',
+        description: 'Could not copy the link to your clipboard.',
+      });
+    });
+  }
 
 
   if (isProjectsLoading || isAuthorized === null) {
@@ -300,6 +324,7 @@ export default function ProjectPage() {
                 isSavingStatus={isSavingStatus}
                 onEdit={() => setIsEditDialogOpen(true)}
                 onDelete={() => setIsDeleteDialogOpen(true)}
+                onShare={handleShare}
               />
             }
              {isTasksLoading ? <Skeleton className="h-48 w-full" /> : 
@@ -310,6 +335,7 @@ export default function ProjectPage() {
                     onAddTask={() => setIsAddTaskDialogOpen(true)} 
                     onEditTask={handleEditTask}
                     onDeleteTask={handleDeleteTask} 
+                    isPublicView={false}
                 />
              }
              {isActivitiesLoading ? <Skeleton className="h-48 w-full" /> : 
@@ -321,6 +347,7 @@ export default function ProjectPage() {
                     onAddActivity={() => setIsAddActivityDialogOpen(true)} 
                     onEditActivity={handleEditActivity} 
                     onDeleteActivity={handleDeleteActivity}
+                    isPublicView={false}
                 />
              }
           </div>
@@ -414,3 +441,5 @@ function PageSkeleton() {
     </div>
   );
 }
+
+    

@@ -24,6 +24,7 @@ import { Input } from '../ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { deleteUser } from '@/lib/sheets';
 import { useTopLoaderStore } from '@/stores/use-top-loader-store';
+import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -174,6 +175,7 @@ export default function UserList() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Team</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -181,7 +183,7 @@ export default function UserList() {
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
                     <TableRow key={i} className="hidden md:table-row">
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={7}>
                         <Skeleton className="h-8 w-full" />
                       </TableCell>
                     </TableRow>
@@ -211,6 +213,12 @@ export default function UserList() {
                           <div className="font-medium text-xs text-muted-foreground md:hidden">Team</div>
                           {user.team || 'N/A'}
                       </TableCell>
+                      <TableCell className="p-0 md:p-4">
+                          <div className="font-medium text-xs text-muted-foreground md:hidden">Status</div>
+                          <Badge variant="outline" className={cn(user.status === 'Active' ? 'text-green-600 border-green-400' : 'text-red-600 border-red-400')}>
+                            {user.status}
+                          </Badge>
+                      </TableCell>
                        <TableCell className="p-0 absolute top-2 right-2 md:static md:p-4 md:text-right">
                         <div className="flex justify-end items-center">
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
@@ -227,7 +235,7 @@ export default function UserList() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       No users found.
                     </TableCell>
                   </TableRow>
