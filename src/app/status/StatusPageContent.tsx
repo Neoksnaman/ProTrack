@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { getProjects, getTasks, getActivities } from '@/lib/sheets';
 import type { Project, Task, Activity } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,10 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { eventBus } from '@/lib/events';
 
-export default function StatusPageContent() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-
+export default function StatusPageContent({ token }: { token: string | null }) {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);

@@ -4,11 +4,15 @@
 import { Suspense } from 'react';
 import StatusPageContent from './StatusPageContent';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSearchParams } from 'next/navigation';
 
 export default function StatusPage() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <StatusPageContent />
+      <StatusPageContent token={token} />
     </Suspense>
   );
 }
@@ -18,7 +22,6 @@ function PageSkeleton() {
     <div className="space-y-8">
        <div className="flex items-center justify-between">
         <Skeleton className="h-12 w-3/4" />
-        <Skeleton className="h-10 w-10 rounded-full" />
       </div>
       <div className="space-y-6">
         <Skeleton className="h-64 w-full" />
