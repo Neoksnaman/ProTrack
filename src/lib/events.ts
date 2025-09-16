@@ -1,33 +1,29 @@
 
-type EventCallback = (...args: any[]) => void;
+type EventMap = Record<string, any>;
+type EventKey<T extends EventMap> = string & keyof T;
 
-class EventBus {
-  private listeners: { [key: string]: EventCallback[] } = {};
+class EventEmitter<T extends EventMap> {
+  private listeners: { [K in keyof T]?: Array<(p: T[K]) => void> } = {};
 
-  on(event: string, callback: EventCallback) {
-    if (!this.listeners[event]) {
-      this.listeners[event] = [];
-    }
-    this.listeners[event].push(callback);
+  on<K extends EventKey<T>>(key: K, fn: (p: T[K]) => void) {
+    this.listeners[key] = (this.listeners[key] || []).concat(fn);
   }
 
-  off(event: string, callback: EventCallback) {
-    if (!this.listeners[event]) {
-      return;
-    }
-    this.listeners[event] = this.listeners[event].filter(
-      (listener) => listener !== callback
-    );
+  off<K extends EventKey<T>>(key: K, fn: (p: T[K]) => void) {
+    this.listeners[key] = (this.listeners[key] || []).filter(f => f !== fn);
   }
 
-  dispatch(event: string, ...args: any[]) {
-    if (!this.listeners[event]) {
-      return;
-    }
-    this.listeners[event].forEach((listener) => {
-      listener(...args);
+  emit<K extends EventKey<T>>(key: K, data?: T[K]) {
+    (this.listeners[key] || []).forEach(fn => {
+      fn(data!);
     });
   }
 }
 
-export const eventBus = new EventBus();
+type AppEvents = {
+  refreshPublicPage: void;
+  'refresh-start': void;
+  'refresh-end': void;
+};
+
+export const events = new EventEmitter<AppEvents>();
