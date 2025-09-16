@@ -38,6 +38,7 @@ export default function StatusPageContent({ token }: { token: string | null }) {
         setError('Project not found or share token is invalid.');
         setProject(null); // Clear project on error
         setIsLoading(false);
+        eventBus.dispatch('refreshPublicPageEnd');
         return;
       }
       
@@ -132,7 +133,6 @@ function PageSkeleton() {
     <div className="space-y-8">
       <div className="space-y-2">
         <Skeleton className="h-12 w-3/4" />
-        <Skeleton className="h-5 w-1/2" />
       </div>
       <div className="space-y-6">
         <Skeleton className="h-64 w-full" />

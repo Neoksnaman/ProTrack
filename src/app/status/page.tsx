@@ -6,17 +6,6 @@ import StatusPageContent from './StatusPageContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSearchParams } from 'next/navigation';
 
-export default function StatusPage() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <StatusPageContent token={token} />
-    </Suspense>
-  );
-}
-
 function PageSkeleton() {
   return (
     <div className="space-y-8">
@@ -29,5 +18,20 @@ function PageSkeleton() {
         <Skeleton className="h-48 w-full" />
       </div>
     </div>
+  );
+}
+
+function StatusPage() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+
+  return <StatusPageContent token={token} />;
+}
+
+export default function StatusPageWrapper() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <StatusPage />
+    </Suspense>
   );
 }
