@@ -1371,3 +1371,5 @@ export async function deleteTaskAndRelatedActivities(taskId: string): Promise<vo
 export async function deleteActivity(activityId: string): Promise<void> {
   await deleteRowAndAppendBlank(ACTIVITY_SHEET_NAME, activityId);
 }
+
+    

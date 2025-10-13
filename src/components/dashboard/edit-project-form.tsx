@@ -123,6 +123,7 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
         ...values,
         startDate: format(values.startDate, 'yyyy-MM-dd'),
         deadline: format(values.deadline, 'yyyy-MM-dd'),
+        shareToken: project.shareToken, // Preserve the share token
       };
       
       const updatedProject = await updateProject(updatedProjectData as any);
@@ -533,3 +534,5 @@ export default function EditProjectForm({ project, isOpen, setIsOpen }: EditProj
     </>
   );
 }
+
+    
